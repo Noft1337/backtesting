@@ -14,6 +14,10 @@ class IdenticalSMASCantCrossError(Exception):
     pass
 
 
+class WTF(Exception):
+    """SHOULD NEVER be raised"""
+
+
 class SMAResult(NamedTuple):
     name: str
     sma: pd.Series
@@ -27,6 +31,11 @@ class SMACrossResult(NamedTuple):
 
 @dataclass
 class PriceAction:
+    """This class is in charge of handling all the price action that's provided
+    from the ``yfinance`` API
+    """
+
+    ticker: str
     data: pd.DataFrame
     start: datetime
     end: datetime
@@ -41,8 +50,15 @@ class PriceAction:
     active_smas: set[str] = field(default_factory=set, init=False)
     active_sma_crosses: set[str] = field(default_factory=set, init=False)
 
-    def calc_return(self, name: str):
-        self.data[name] = self.data["Close"].pct_change()
+    # Will be useful when we support multiple tickers
+    # tdata: ClassVar[dict[str, pd.Series]] = {}
+    # def __post_init__(self):
+    #     self.tickers = self.data.columns.get_level_values(0)
+    #     for t in self.tickers:
+    #         self.tdata[t] = self.data[t]
+
+    def calc_return(self, col_name: str):
+        self.data[col_name] = self.data["Close"].pct_change()
 
     def get_sma(self, period: int) -> SMAResult:
         """Calculate the SMA of |period| and register it. If the SMA of this |period|
@@ -111,6 +127,8 @@ class YClient(BaseModel):
         This will then return only the Price Action within the given
         range and only a data chunk of size |chunk|
 
+        NOTE: Doesn't support multiple tickers. YET.
+
         Args:
             tikcer(str): the ticker to use
             start(datetime): begining of time range
@@ -130,11 +148,27 @@ class YClient(BaseModel):
             real_end = end
         yend = real_end.strftime(self._yf_time_fmt)
         data = yf.download(
-            ticker, start=ystart, end=yend, interval=interval, auto_adjust=True
+            ticker,
+            start=ystart,
+            end=yend,
+            interval=interval,
+            auto_adjust=True,
+            group_by="ticker",
         )
         if data is None:
             raise EmptyPriceActionError(
                 f"Can't fetch data for {ticker} between {ystart} -> {yend}"
             )
 
-        return PriceAction(data=data, start=start, end=real_end, chunk=chunk)
+        # No Support for multi-index DataFrames
+        tdata = data[ticker].copy()
+        # Here for linting, shows tdata as pd.Series for some reason...
+        if not isinstance(tdata, pd.DataFrame):
+            raise WTF("For some reason, the data returned isn't a DataFrame")
+        return PriceAction(
+            ticker=ticker,
+            data=tdata,
+            start=start,
+            end=real_end,
+            chunk=chunk,
+        )

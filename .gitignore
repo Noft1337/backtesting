@@ -1,6 +1,7 @@
 # Customs
-sketch.*
-sketch/
+# Still in a learning process, will commit sketch for now, will probably be deleted in a future commit.
+# sketch.*
+# sketch/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

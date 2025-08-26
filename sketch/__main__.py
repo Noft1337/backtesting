@@ -30,21 +30,29 @@ def main():
         prev = i - 1  # I hate seeing so many `i - 1`s
         sig = smas_cross.position.iat[i]
 
-        prev_cash = d.iat[i, col_cash]
+        prev_cash = d.iat[prev, col_cash]
         prev_hold = d.iat[prev, col_hold]
         day_ret = d.iat[i, col_ret]
 
         if sig == 1:  # SMAs Crossed UP, go Long
             d.iat[i, col_cash] = 0.0
-            d.iat[i, col_hold] = prev_cash * day_ret
+            d.iat[i, col_hold] = prev_cash * (1 + day_ret)
         elif sig == -1:  # SMAs Crossed Down, Liquidate
             d.iat[i, col_cash] = prev_hold
             d.iat[i, col_hold] = 0.0
         else:  # Update Holdings based on the daily return
-            d.iat[i, col_hold] = prev_cash * day_ret
+            d.iat[i, col_cash] = prev_cash
+            d.iat[i, col_hold] = prev_hold * (1 + day_ret)
 
         # update values
         d.iat[i, col_total] = d.iat[i, col_hold] + d.iat[i, col_cash]
+
+    last_total = d.iat[-1, col_total]
+    pct = (last_total - CASH) / CASH * 100
+    print(
+        f"Cash on start: {CASH:.2f}\n"
+        f"Cash after investing: {last_total:.2f} ({pct:.2f}%)"
+    )
 
     return pa
 

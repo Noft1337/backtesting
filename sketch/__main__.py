@@ -1,5 +1,5 @@
 from datetime import datetime
-from utils.models import YClient
+from models.price_action import YClient
 
 CASH = 1000.0
 

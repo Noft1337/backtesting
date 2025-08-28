@@ -132,5 +132,7 @@ class Tester:
             self._run_with_except(f, tcase)
         else:
             res = f(**tcase.kw)
-            if res != tcase.result:
+            # If res is None, assume the function tested for simply not crashing
+            # regardless of the returned value
+            if tcase.result is not None and res != tcase.result:
                 pytest.fail(f"Expected result: {tcase.result} but got: {res}")

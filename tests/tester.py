@@ -95,6 +95,8 @@ class TestCases:
         return self
 
     def __next__(self) -> TestCasesIter:
+        if self.i == len(self.cases):
+            raise StopIteration
         try:
             name = f"{self.name}_{self.i}"
             cur_case = self.cases[self.i]

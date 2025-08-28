@@ -16,9 +16,9 @@ class TestCase:
 
     def __init__(
         self,
-        result: Optional[Any],
-        raises: Optional[type[Exception]],
-        exc_msg: Optional[str],
+        result: Optional[Any] = None,
+        raises: Optional[type[Exception]] = None,
+        exc_msg: Optional[str] = None,
         **kwargs,
     ):
         self.kw = kwargs
@@ -116,16 +116,14 @@ class Tester:
         with pytest.raises(tcr.exc, match=tcr.exc_msg):
             f(**tcr.kw)
 
-    def run_tests(self, f: Callable, tcs: TestCases):
+    def run_test_case(self, f: Callable, tcase: TestCase):
         """Runs a function ``f`` for each ``TestCase`` in ``TestCases`` and verifies its
         behavior. Checkes if the expected result is returned, if the right Exception is
         raised and also, if present, if the raised Exception contains a certian string
         """
-        for t in tcs:
-            tcase = t.case
-            if tcase.exc is not None:
-                self._run_with_except(f, tcase)
-            else:
-                res = f(**tcase.kw)
-                if res != tcase.result:
-                    pytest.fail(f"Expected result: {tcase.result} but got: {res}")
+        if tcase.exc is not None:
+            self._run_with_except(f, tcase)
+        else:
+            res = f(**tcase.kw)
+            if res != tcase.result:
+                pytest.fail(f"Expected result: {tcase.result} but got: {res}")

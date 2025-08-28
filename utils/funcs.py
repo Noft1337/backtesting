@@ -1,5 +1,5 @@
 import re
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 
 def parse_interval(i: str) -> timedelta:
@@ -61,3 +61,32 @@ def td_to_str(i: timedelta) -> str:
             ret += f"{v}{k}"
 
     return ret
+
+
+def discard_datetime_by_interval(dt: datetime, i: timedelta) -> datetime:
+    """
+    Truncate `dt` by the precision implied by `i` (a timedelta).
+
+    Rules:
+        - i >= 1 day      -> keep date only (00:00:00.000000)
+        - i >= 1 hour     -> keep up to hour     (mm=ss=us=0)
+        - i >= 1 minute   -> keep up to minute   (ss=us=0)
+        - i >= 1 second   -> keep up to second   (us=0)
+        - 0 < i < 1 sec   -> leave as-is
+
+    Preserves tzinfo/fold.
+    """
+    if i <= timedelta(0):
+        raise ValueError("interval must be positive")
+
+    if i >= timedelta(days=1):
+        return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    if i >= timedelta(hours=1):
+        return dt.replace(minute=0, second=0, microsecond=0)
+    if i >= timedelta(minutes=1):
+        return dt.replace(second=0, microsecond=0)
+    if i >= timedelta(seconds=1):
+        return dt.replace(microsecond=0)
+
+    # sub-second intervals: no truncation (microsecond is the smallest unit)
+    return dt

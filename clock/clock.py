@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from typing import Union
 
-from utils import parse_interval, td_to_str
+from utils import parse_interval, td_to_str, discard_datetime_by_interval
 from .exceptions import IntervalNotSupported
 
 INTERVALS_ALLOWED = ["1m", "5m", "10m", "30m", "1h", "1d", "7d", "30d", "1w", "4w"]
@@ -14,12 +14,17 @@ INTERVALS_REPR = ", ".join(INTERVALS_ALLOWED)
 class Clock:
     interval: Union[str, timedelta]
     start: datetime
+    end: datetime = datetime.now()
 
+    _date: datetime = field(init=False)
     _ival_str: str = field(default_factory=str, init=False)
     _ival_td: timedelta = field(default_factory=timedelta, init=False)
 
     def __post_init__(self):
         self._parse_interval()
+        self._date = self.start
+        # Discard useless fields to be able to stop iterating
+        self.end = discard_datetime_by_interval(self.end, self._ival_td)
 
     def _parse_interval(self):
         if isinstance(self.interval, str):
@@ -33,3 +38,13 @@ class Clock:
                 f"Interval: {self._ival_str} not supported, "
                 f"supported intervals are: {INTERVALS_REPR}"
             )
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._date == self.end:
+            raise StopIteration
+
+        self._date += self._ival_td
+        return self._date

@@ -1,9 +1,9 @@
 # pylint: disable=C0103,W0614,W0401
 import pytest
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from tests import *
-from utils.funcs import parse_interval, td_to_str
+from utils.funcs import parse_interval, td_to_str, discard_datetime_by_interval
 
 
 _exc_msg_1 = "Allowed formats must have one of these units included: w,d,h,m,s"
@@ -55,3 +55,46 @@ tcs_td_to_str = TestCases(
 @pytest.mark.parametrize("tc", tcs_td_to_str, ids=tids(tcs_td_to_str))
 def test_td_to_str(tc: TestCasesIter):
     T.run_test_case(td_to_str, tc.case)
+
+
+_ts = datetime.strptime("2001-01-01T16:30:05.123", "%Y-%m-%dT%H:%M:%S.%f")
+tcs_discard_datetime_by_interval = TestCases(
+    "",
+    [
+        TestCase(
+            dt=_ts,
+            i=timedelta(days=1),
+            result=datetime.strptime("2001-01-01", "%Y-%m-%d"),
+        ),
+        TestCase(
+            dt=_ts,
+            i=timedelta(hours=1),
+            result=datetime.strptime("2001-01-01T16", "%Y-%m-%dT%H"),
+        ),
+        TestCase(
+            dt=_ts,
+            i=timedelta(minutes=1),
+            result=datetime.strptime("2001-01-01T16:30", "%Y-%m-%dT%H:%M"),
+        ),
+        TestCase(
+            dt=_ts,
+            i=timedelta(seconds=1),
+            result=datetime.strptime("2001-01-01T16:30:05", "%Y-%m-%dT%H:%M:%S"),
+        ),
+        TestCase(
+            dt=_ts,
+            i=timedelta(microseconds=1),
+            result=_ts,
+        ),
+        TestCase(dt=_ts, i=timedelta(-1), raises=ValueError),
+    ],
+)
+
+
+# TODO: Figure why this skips the test
+# @pytest.mark.dependency(depends=["test_td_to_str"])
+@pytest.mark.parametrize(
+    "tc", tcs_discard_datetime_by_interval, ids=tids(tcs_discard_datetime_by_interval)
+)
+def test_discard_datetime_by_interval(tc: TestCasesIter):
+    T.run_test_case(discard_datetime_by_interval, tc.case)

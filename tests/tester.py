@@ -11,8 +11,9 @@ class TestCase:
     an unknown function's runtime behavior, and serves the caller with it.
     By 'caller' I mean the software that has called this object. Assuming it's either
     ``TestCases`` or ``Tester``
-
     """
+
+    __test__ = False  # make pytest not think this should be tested
 
     def __init__(
         self,
@@ -51,6 +52,7 @@ class TestCase:
 
 
 class TestCasesIter(NamedTuple):
+    __test__ = False  # make pytest not think this should be tested
     name: str
     case: TestCase
 
@@ -66,6 +68,8 @@ class TestCases:
         name(str): the name prefix of the test
         cases(list[dict]): a list of kwargs that will be passed to the test
     """
+
+    __test__ = False  # make pytest not think this should be tested
 
     name: str
     cases: list[Union[TestCase, dict]]
@@ -111,6 +115,8 @@ class Tester:
     """Helper class that runs a function and tests if its behavior based on logic that
     is defined and provided by ``TestCases``
     """
+
+    __test__ = False  # make pytest not think this should be tested
 
     def _run_with_except(self, f: Callable, tcr: TestCase):
         assert tcr.exc is not None

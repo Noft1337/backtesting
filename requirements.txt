@@ -36,9 +36,11 @@ pydantic_core==2.33.2
 Pygments==2.19.2
 pyluach==2.2.0
 pytest==8.4.1
+pytest-dependency==0.6.0
 python-dateutil==2.9.0.post0
 pytz==2025.2
 requests==2.32.5
+setuptools==80.9.0
 six==1.17.0
 soupsieve==2.7
 stack-data==0.6.3

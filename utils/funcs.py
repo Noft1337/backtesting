@@ -37,3 +37,27 @@ def parse_interval(i: str) -> timedelta:
         ) from e
     days = weeks * 7 + days
     return timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
+
+
+def td_to_str(i: timedelta) -> str:
+    """Converts a datetime.timedelta into a string representation
+
+    Examples:
+        >>> td_to_str(timedelta(days=1)
+        "1d"
+        >>> td_to_str(timedelta(days=1, hours=12))
+        "1d12h"
+    """
+    ret = ""
+    seconds = i.seconds % 60
+    minutes = i.seconds // 60 % 60
+    hours = i.seconds // 3600
+    days = i.days % 7
+    weeks = i.days // 7
+    d = {"w": weeks, "d": days, "h": hours, "m": minutes, "s": seconds}
+
+    for k, v in d.items():
+        if v > 0:
+            ret += f"{v}{k}"
+
+    return ret

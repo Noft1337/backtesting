@@ -107,7 +107,6 @@ class TestCases:
             self.i += 1
 
 
-# TODO: find a way to name each test
 class Tester:
     """Helper class that runs a function and tests if its behavior based on logic that
     is defined and provided by ``TestCases``

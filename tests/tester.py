@@ -136,3 +136,13 @@ class Tester:
             # regardless of the returned value
             if tcase.result is not None and res != tcase.result:
                 pytest.fail(f"Expected result: {tcase.result} but got: {res}")
+
+    def run_test_class(self, c: object, tcase: TestCase):
+        """
+        TODO:
+            Make this function verify a Classe's attributes, i.e make sure
+            a class that was initialized, had all the attributes set as expected
+
+        NOTE:
+            Requires adding a ``attr`` field to ``TestCase``
+        """

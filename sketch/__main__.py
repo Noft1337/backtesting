@@ -60,7 +60,7 @@ def smas_cross():
 
 def iter_clock():
     start = datetime.strptime("2025-08-01", "%Y-%m-%d")
-    c = Clock(start, interval="1h")
+    c = Clock(start, interval="1w")
     for t in c:
         print(t.strftime("%Y-%m-%dT%H:%M:%S"))
 

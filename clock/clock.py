@@ -1,4 +1,3 @@
-import pandas as pd
 import pandas_market_calendars as mcal
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
@@ -103,6 +102,11 @@ class Clock:
             self._today_close = self.sched.iat[self._sched_i, loc].to_pydatetime()
         return self._today_close
 
+    @property
+    def today(self) -> datetime:
+        """To be used only when not in intraday mode"""
+        return self.sched.index[self._sched_i].to_pydatetime()
+
     def __iter__(self):
         return self
 
@@ -113,9 +117,9 @@ class Clock:
         # If not intraday, open & close times shouldn't be a factor
         if not self.is_intraday:
             try:
+                self.time = self.today
                 return self.time
             finally:
-                self.time += self._ival_td
                 self._sched_i += 1
 
         # On intraday, we are iterating over the times within the day using

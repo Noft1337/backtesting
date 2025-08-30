@@ -40,3 +40,11 @@ tcs_clock_interval = TestCases(
 def test_clock_interval(tcs: TestCasesIter):
     """Test that only the expected timedeltas are indeed accepted by ``Clock``"""
     T.run_test_case(Clock, tcs.case)
+
+
+# todo: test clock iteration
+# [X] - intraday
+# [ ] - 1 hour
+# [ ] - 1 day
+# [ ] - 1 week
+# [ ] - 4 week

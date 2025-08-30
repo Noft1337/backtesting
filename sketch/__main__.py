@@ -60,9 +60,10 @@ def smas_cross():
 
 def iter_clock():
     start = datetime.strptime("2025-08-01", "%Y-%m-%d")
-    c = Clock(start, interval="1w")
+    c = Clock(start, interval="1h")
+    fmt = "%Y-%m-%dT%H:%M:%S"
     for t in c:
-        print(t.strftime("%Y-%m-%dT%H:%M:%S"))
+        print(f"Open: {t.open.strftime(fmt)}\tClose: {t.close.strftime(fmt)}")
 
 
 def main():

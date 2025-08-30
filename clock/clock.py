@@ -1,8 +1,10 @@
+import pandas as pd
 import pandas_market_calendars as mcal
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from typing import Union, ClassVar
 
+from models import Bar
 from utils import parse_interval, td_to_str, discard_datetime_by_interval
 from .exceptions import IntervalNotSupported
 
@@ -69,11 +71,10 @@ class Clock:
             start=self._market_start,
             end=self._market_end,
         )
-        self._sched_i = 0
-        self._sched_len = len(self.sched)
+        self.range = mcal.date_range(self.sched, frequency=self._ival_str)
+        self._range_i = 0
+        self._range_len = len(self.sched)
         self._sched_calc = True
-        self._today_open: datetime
-        self._today_close: datetime
 
     def _parse_interval(self):
         if isinstance(self.interval, str):
@@ -88,60 +89,35 @@ class Clock:
                 f"supported intervals are: {INTERVALS_REPR}"
             )
 
-    @property
-    def today_open(self):
-        if self._sched_calc:
-            loc = self.sched.columns.get_loc(self._market_start)
-            self._today_open = self.sched.iat[self._sched_i, loc].to_pydatetime()
-        return self._today_open
+    def _is_last_bar_of_day(self, ts: pd.Timestamp) -> bool:
+        today = ts.date().strftime(MCAL_TIME_FMT)
+        close = self.sched.at[today, self._market_end]
 
-    @property
-    def today_close(self):
-        if self._sched_calc:
-            loc = self.sched.columns.get_loc(self._market_end)
-            self._today_close = self.sched.iat[self._sched_i, loc].to_pydatetime()
-        return self._today_close
-
-    @property
-    def today(self) -> datetime:
-        """To be used only when not in intraday mode"""
-        return self.sched.index[self._sched_i].to_pydatetime()
+        return ts == close
 
     def __iter__(self):
         return self
 
-    def __next__(self) -> datetime:
-        if self._sched_i == self._sched_len:
+    def __next__(self) -> Bar:
+        """Iterates over the date range that has been generated upon instance
+        initialization
+
+        Note:
+            This returns the CLOSE time of the bar!!
+
+        todo: return Tuple of open & close of each bar. probably will be needed
+        """
+        if self._range_i == self._range_len:
             raise StopIteration
 
-        # If not intraday, open & close times shouldn't be a factor
-        if not self.is_intraday:
-            try:
-                self.time = self.today
-                return self.time
-            finally:
-                self._sched_i += 1
-
-        # On intraday, we are iterating over the times within the day using
-        # ``self.interval``. this requires to factor in the open & close times and
-        # change them once we finish iterating over the current trading day.
-
-        # NOTE: this is necessary because panda_market_calendars doesn't support
-        # intraday frequencies
-        if self._sched_calc:
-            self.time = self.today_open
-
         try:
-            return self.time
-        finally:
-            # On 1h chart, the last bar is only 30 mins
-            if self._ival_str == "1h" and self.time == self.today_close - MINS_30:
-                self.time += timedelta(minutes=30)
+            ts = self.range[self._range_i]
+            bclose = ts.to_pydatetime()
+            if self._ival_str == "1h" and self._is_last_bar_of_day(ts):
+                bopen = bclose - MINS_30
             else:
-                self.time += self._ival_td
-                # Reached close time, recalculate open & close time
-                if self.time > self.today_close:
-                    self._sched_calc = True
-                    self._sched_i += 1
-                else:
-                    self._sched_calc = False
+                bopen = bclose - self._ival_td
+
+            return Bar(bopen, bclose)
+        finally:
+            self._range_i += 1

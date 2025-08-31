@@ -33,7 +33,7 @@ tcs_parse_interval = TestCases(
 @pytest.mark.dependency(name="test_parse_interval")
 @pytest.mark.parametrize("tc", tcs_parse_interval, ids=tids(tcs_parse_interval))
 def test_parse_interval(tc: TestCasesIter):
-    T.run_test_case(parse_interval, tc.case)
+    tc.case.run_test(parse_interval)
 
 
 tcs_td_to_str = TestCases(
@@ -54,7 +54,7 @@ tcs_td_to_str = TestCases(
 @pytest.mark.dependency(depends=["test_parse_interval"])
 @pytest.mark.parametrize("tc", tcs_td_to_str, ids=tids(tcs_td_to_str))
 def test_td_to_str(tc: TestCasesIter):
-    T.run_test_case(td_to_str, tc.case)
+    tc.case.run_test(td_to_str)
 
 
 _ts = datetime.strptime("2001-01-01T16:30:05.123", "%Y-%m-%dT%H:%M:%S.%f")
@@ -97,4 +97,4 @@ tcs_discard_datetime_by_interval = TestCases(
     "tc", tcs_discard_datetime_by_interval, ids=tids(tcs_discard_datetime_by_interval)
 )
 def test_discard_datetime_by_interval(tc: TestCasesIter):
-    T.run_test_case(discard_datetime_by_interval, tc.case)
+    tc.case.run_test(discard_datetime_by_interval)

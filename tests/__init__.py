@@ -1,10 +1,8 @@
-from tests.tester import Tester, TestCasesIter, TestCases, TestCase
+from tests.tester import TestCasesIter, TestCases, TestCase
 
 # Use for all tests
-T = Tester()
 
 __all__ = [
-    "T",
     "TestCase",
     "TestCases",
     "TestCasesIter",

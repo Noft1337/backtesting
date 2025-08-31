@@ -1,9 +1,8 @@
 import pytest
-from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Optional, Any, NamedTuple, Union
+from typing import Optional, Any, NamedTuple
 
 
 class Case(Enum):
@@ -22,7 +21,6 @@ class Case(Enum):
     CLASS = None
 
 
-@dataclass
 class TestCase:
     """A single TestCase for TestCases, receives all the needed information about
     an unknown function's runtime behavior, and serves the caller with it.
@@ -35,14 +33,20 @@ class TestCase:
     """
 
     __test__ = False  # make pytest not think this should be tested
-    case_: Case = Case.SIMPLE
-    result: Optional[Any] = None
-    raises: Optional[type[Exception]] = None
-    exc_msg: Optional[str] = None
 
-    meta: dict[str, Any] = field(default_factory=dict)
-
-    def __post_init__(self):
+    def __init__(
+        self,
+        case_: Case = Case.SIMPLE,
+        result: Optional[Any] = None,
+        raises: Optional[type[Exception]] = None,
+        exc_msg: Optional[str] = None,
+        **kwargs,
+    ):
+        self.case_ = case_
+        self.result = result
+        self.raises = raises
+        self.exc_msg = exc_msg
+        self.meta = kwargs
         self._is_result = self.result is not None
         self._is_exc = self.raises is not None
         self._is_exc_msg = self.exc_msg is not None

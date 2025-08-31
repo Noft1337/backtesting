@@ -103,27 +103,9 @@ class TestCases:
     __test__ = False  # make pytest not think this should be tested
 
     name: str
-    cases: list[Union[TestCase, dict]]
+    cases: list[TestCase]
 
     i: int = field(default_factory=int, init=False)
-
-    def _parse_test_case(self, case: Case, tcase: dict) -> TestCase:
-        """Creates a new ``TestCase`` object using a dictionary, this is done by first
-        converting ``tcase`` into a default dict that returns `None` when a key is
-        missing and that way saves the need to verify wether optional arguments are
-        present. Then it deletes these arguments to not pass them twice and tcase is
-        then passed as the ``kwargs`` that ``TestCase`` requires
-        """
-        tcase = defaultdict(lambda: None, tcase)
-        tc_kwargs = {
-            "result": tcase["result"],
-            "raises": tcase["raises"],
-            "exc_msg": tcase["exc_msg"],
-        }
-        del tcase["result"]
-        del tcase["raises"]
-        del tcase["exc_msg"]
-        return TestCase(case, **tc_kwargs, **tcase)  # type: ignore
 
     def __iter__(self):
         self.i = 0
@@ -135,46 +117,6 @@ class TestCases:
         try:
             name = f"{self.name}_{self.i}"
             cur_case = self.cases[self.i]
-            if isinstance(cur_case, TestCase):
-                return TestCasesIter(name, cur_case)
-            case_ = cur_case["case"]
-            return TestCasesIter(name, self._parse_test_case(case_, cur_case))
+            return TestCasesIter(name, cur_case)
         finally:
             self.i += 1
-
-
-class Tester:
-    """Helper class that runs a function and tests if its behavior based on logic that
-    is defined and provided by ``TestCases``
-    """
-
-    __test__ = False  # make pytest not think this should be tested
-
-    def _run_with_except(self, f: Callable, tcr: TestCase):
-        assert tcr.raises is not None
-        with pytest.raises(tcr.raises, match=tcr.exc_msg):
-            f(**tcr.meta)
-
-    def run_test_case(self, f: Callable, tcase: TestCase):
-        """Runs a function ``f`` for each ``TestCase`` in ``TestCases`` and verifies its
-        behavior. Checkes if the expected result is returned, if the right Exception is
-        raised and also, if present, if the raised Exception contains a certian string
-        """
-        if tcase.raises is not None:
-            self._run_with_except(f, tcase)
-        else:
-            res = f(**tcase.meta)
-            # If res is None, assume the function tested for simply not crashing
-            # regardless of the returned value
-            if tcase.result is not None and res != tcase.result:
-                pytest.fail(f"Expected result: {tcase.result} but got: {res}")
-
-    def run_test_class(self, c: object, tcase: TestCase):
-        """
-        TODO:
-            Make this function verify a Classe's attributes, i.e make sure
-            a class that was initialized, had all the attributes set as expected
-
-        NOTE:
-            Requires adding a ``attr`` field to ``TestCase``
-        """

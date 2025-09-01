@@ -8,7 +8,7 @@ from models import Bar
 from utils import parse_interval, td_to_str, discard_datetime_by_interval
 from .exceptions import IntervalNotSupported
 
-INTERVALS_ALLOWED = ["1m", "5m", "10m", "30m", "1h", "1d", "7d", "30d", "1w", "4w"]
+INTERVALS_ALLOWED = ["1m", "5m", "10m", "30m", "1h", "1d", "7d", "1w"]
 INTERVALS_ALLOWED_TD = [parse_interval(i) for i in INTERVALS_ALLOWED]
 INTERVALS_REPR = ", ".join(INTERVALS_ALLOWED)
 
@@ -36,7 +36,7 @@ class Clock:
         end(datetime): The end of the date range. Default is now
         interval(Union[str, timedelta]): the time interval that the clock is able to
             support. as of now, only 1 interval is allowed.
-            Allowed intervals: 1m, 5m, 10m, 30m, 1h, 1d, 7d, 30d, 1w, 4w
+            Allowed intervals: 1m, 5m, 10m, 30m, 1h, 1d, 7d, 1w
         extended(bool): enable pre & post market times. Default is False
     """
 

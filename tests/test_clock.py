@@ -23,11 +23,7 @@ tcs_clock_interval = TestCases(
         TestCase(interval=timedelta(days=1), start=_start),
         TestCase(interval="7d", start=_start),
         TestCase(interval=timedelta(days=7), start=_start),
-        TestCase(interval="30d", start=_start),
-        TestCase(interval=timedelta(days=30), start=_start),
         TestCase(interval="1w", start=_start),
-        TestCase(interval="4w", start=_start),
-        TestCase(interval=timedelta(days=28), start=_start),
         # Exception cases
         TestCase(interval="invalid", start=_start, raises=ValueError),
         TestCase(interval="3d", start=_start, raises=IntervalNotSupported),

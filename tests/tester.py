@@ -1,8 +1,8 @@
 import pytest
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Optional, Any, NamedTuple
+from typing import Union, NamedTuple, Optional, Any
 
 
 class Case(Enum):
@@ -21,6 +21,9 @@ class Case(Enum):
     CLASS = None
 
 
+TestSubject = Union[Callable, Iterator]
+
+
 class TestCase:
     """A single TestCase for TestCases, receives all the needed information about
     an unknown function's runtime behavior, and serves the caller with it.
@@ -36,13 +39,13 @@ class TestCase:
 
     def __init__(
         self,
-        case_: Case = Case.SIMPLE,
+        case: Case = Case.SIMPLE,
         result: Optional[Any] = None,
         raises: Optional[type[Exception]] = None,
         exc_msg: Optional[str] = None,
         **kwargs,
     ):
-        self.case_ = case_
+        self.case = case
         self.result = result
         self.raises = raises
         self.exc_msg = exc_msg
@@ -52,8 +55,8 @@ class TestCase:
         self._is_exc_msg = self.exc_msg is not None
 
         # If ``raises`` is set, force ``case`` to be RAISES
-        if self._is_exc and self.case_ != Case.RAISES:
-            self.case_ = Case.RAISES
+        if self._is_exc and self.case != Case.RAISES:
+            self.case = Case.RAISES
 
         self._tests = {
             Case.SIMPLE: self.test_simple,
@@ -76,14 +79,21 @@ class TestCase:
         with pytest.raises(self.raises, match=self.exc_msg):
             f(**self.meta)
 
-    def test_iter(self, f: Callable):
+    def test_iter(self, f: Iterator):
         """Test an Iterator Case"""
+        results = []
+        for i in f:
+            results.append(i)
+        if self.result != results:
+            pytest.fail(
+                f"Iteration expected results: {self.result}, actual results: {results}"
+            )
 
     def test_class(self, f: Callable):
         raise NotImplementedError("Case.CLASS Isn't implemented yet")
 
-    def run_test(self, f: Callable):
-        return self._tests[self.case_](f)
+    def run_test(self, f: TestSubject):
+        return self._tests[self.case](f)
 
 
 class TestCasesIter(NamedTuple):

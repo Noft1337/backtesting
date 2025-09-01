@@ -71,7 +71,10 @@ class Clock:
             start=self._market_start,
             end=self._market_end,
         )
-        self.range = mcal.date_range(self.sched, frequency=self._ival_str)
+        if self._ival_td < timedelta(days=1):
+            self.range = mcal.date_range(self.sched, frequency=self._ival_str)
+        else:
+            self.range = mcal.date_range(self.sched, frequency="1d")
         self._range_i = 0
         self._range_len = len(self.sched)
         self._sched_calc = True

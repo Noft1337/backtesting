@@ -76,7 +76,7 @@ class Clock:
         else:
             self.range = mcal.date_range(self.sched, frequency="1d")
         self._range_i = 0
-        self._range_len = len(self.sched)
+        self._range_len = len(self.range)
         self._sched_calc = True
 
     def _parse_interval(self):
@@ -92,11 +92,18 @@ class Clock:
                 f"supported intervals are: {INTERVALS_REPR}"
             )
 
-    def _is_last_bar_of_day(self, ts: pd.Timestamp) -> bool:
-        today = ts.date().strftime(MCAL_TIME_FMT)
-        close = self.sched.at[today, self._market_end]
+    def _cmp_bars(self, cell: str, ts: Union[pd.Timestamp, datetime]) -> bool:
+        """Compares if a timestamp matches against a specific cell for the same day"""
+        day = ts.date().strftime(MCAL_TIME_FMT)  # format it to str repr
+        v = self.sched.at[day, cell]
 
-        return ts == close
+        return ts == v
+
+    def _is_first_bar_of_day(self, ts: Union[pd.Timestamp, datetime]) -> bool:
+        return self._cmp_bars(self._market_start, ts)
+
+    def _is_last_bar_of_day(self, ts: Union[pd.Timestamp, datetime]) -> bool:
+        return self._cmp_bars(self._market_end, ts)
 
     def __iter__(self):
         return self
@@ -114,13 +121,20 @@ class Clock:
             raise StopIteration
 
         try:
-            ts = self.range[self._range_i]
-            bclose = ts.to_pydatetime()
-            if self._ival_str == "1h" and self._is_last_bar_of_day(ts):
-                bopen = bclose - MINS_30
+            # the timestamps are always the CLOSE timestamps, we need to calculate the
+            # OPEN timestamp independently
+            close_ts = self.range[self._range_i]
+            bar_close = close_ts.to_pydatetime()
+            if self._is_first_bar_of_day(bar_close - self._ival_td):
+                # If it's the first bar of the day, we can't use the previous timestamp
+                # as the bar's OPEN time
+                bar_open = bar_close - self._ival_td
             else:
-                bopen = bclose - self._ival_td
+                # If it isn't the first bar, use the last bar's CLOSE Timestamp as this
+                # one's OPEN Timestamp
+                open_ts = self.range[self._range_i - 1]
+                bar_open = open_ts.to_pydatetime()
 
-            return Bar(bopen, bclose)
+            return Bar(bar_open, bar_close)
         finally:
             self._range_i += 1

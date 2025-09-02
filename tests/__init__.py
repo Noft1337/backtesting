@@ -1,0 +1,16 @@
+from tests.tester import TestCasesIter, TestCases, TestCase, Case
+
+# Use for all tests
+
+__all__ = [
+    "TestCase",
+    "TestCases",
+    "TestCasesIter",
+    "Case",
+    "tids",
+]
+
+
+def tids(tcs: TestCases) -> list:
+    """Return the ids of the TestCases"""
+    return [tc.name for tc in tcs]

@@ -1,9 +1,8 @@
 import pytest
 from sketch import sketch
-from tests.tester import TestCases, TestCase, Tester, TestCasesIter
+from tests.tester import TestCases, TestCase, TestCasesIter
 
 
-T = Tester()
 tcs_sketch = TestCases(
     "test_sketch",
     [
@@ -16,4 +15,4 @@ tcs_sketch = TestCases(
 
 @pytest.mark.parametrize("test_case", tcs_sketch, ids=[tc.name for tc in tcs_sketch])
 def test_sketch(test_case: TestCasesIter):
-    T.run_test_case(sketch, test_case.case)
+    test_case.case.run_test(sketch)

@@ -1,9 +1,27 @@
 import pytest
-import re
-from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
-from typing import Optional, Any, NamedTuple, Union
+from enum import Enum, auto
+from typing import Union, NamedTuple, Optional, Any
+
+
+class Case(Enum):
+    """Enumerator object to define a type of a TestCase
+
+    Attributes:
+        SIMPLE: a simple case of runing a function and comparing its return value
+        RAISES: an Exception should be raised
+        ITERATOR: The object is an iterator, verify its iterations
+        CLASS(Not Implemented yet): test that a class was initialized properly
+    """
+
+    SIMPLE = auto()
+    RAISES = auto()
+    ITERATOR = auto()
+    CLASS = None
+
+
+TestSubject = Union[Callable, Iterator]
 
 
 class TestCase:
@@ -11,44 +29,74 @@ class TestCase:
     an unknown function's runtime behavior, and serves the caller with it.
     By 'caller' I mean the software that has called this object. Assuming it's either
     ``TestCases`` or ``Tester``
+
+    Supplying ``case_`` is optional. The instance will infer which is the correct case
+    IF it's either SIMPLE or RAISES. However, it can't differ between SIMPLE and
+    ITERATOR.
     """
 
     __test__ = False  # make pytest not think this should be tested
 
     def __init__(
         self,
+        name: str = "",
+        case: Case = Case.SIMPLE,
         result: Optional[Any] = None,
         raises: Optional[type[Exception]] = None,
         exc_msg: Optional[str] = None,
         **kwargs,
     ):
-        self.kw = kwargs
+        self.name = name
+        self.case = case
         self.result = result
-        self.is_result = result is not None
-        self.exc = raises
-        self.is_exc = raises is not None
+        self.raises = raises
         self.exc_msg = exc_msg
-        self.is_exc_msg = exc_msg is not None
+        self.meta = kwargs
+        self._is_result = self.result is not None
+        self._is_exc = self.raises is not None
+        self._is_exc_msg = self.exc_msg is not None
 
-    def verify(self, res: Optional[Any], exc: Optional[Any], exc_msg: Optional[str]):
-        """Verifies that a tested function's output is as expected
-        NOTE: maybe deleted in the future due to pytest having similar functions
-        """
-        if res:
-            assert self.result is not None, "No Result was expected"
-            assert self.result == exc, "Returned result doesn't match"
-        if exc:
-            assert self.exc is not None, "No Exception was suppossed to be raised"
-            assert (
-                self.exc == exc
-            ), f"Expected the exception: {type(self.exc)} but got {type(exc)}"
-        if exc_msg:
-            assert (
-                self.exc is not None and exc is not None
-            ), "Exception message was provided but no Exception ?"
-            assert re.match(
-                exc_msg, str(exc)
-            ), f'Expression: "{exc_msg}" is not in {type(exc)}, got {exc} instead'
+        # If ``raises`` is set, force ``case`` to be RAISES
+        if self._is_exc and self.case != Case.RAISES:
+            self.case = Case.RAISES
+
+        self._tests = {
+            Case.SIMPLE: self.test_simple,
+            Case.RAISES: self.test_raises,
+            Case.ITERATOR: self.test_iter,
+            Case.CLASS: self.test_class,
+        }
+
+    def test_simple(self, f: Callable):
+        """Test a Simple Case"""
+        res = f(**self.meta)
+        # If res is None, assume the function tested for simply not crashing
+        # regardless of the returned value
+        if self._is_result and res != self.result:
+            pytest.fail(f"Expected result: {self.result} but got: {res}")
+
+    def test_raises(self, f: Callable):
+        """Test an Exception Case"""
+        assert self.raises is not None
+        with pytest.raises(self.raises, match=self.exc_msg):
+            f(**self.meta)
+
+    def test_iter(self, it: Iterator):
+        """Test an Iterator Case"""
+        results = []
+        for i in it:
+            results.append(i)
+        if self.result != results:
+            pytest.fail(
+                f"Iteration expected results:\n\t{self.result}\n"
+                f"Actual results\n\t{results}"
+            )
+
+    def test_class(self, f: Callable):
+        raise NotImplementedError("Case.CLASS Isn't implemented yet")
+
+    def run_test(self, f: TestSubject):
+        return self._tests[self.case](f)
 
 
 class TestCasesIter(NamedTuple):
@@ -72,27 +120,9 @@ class TestCases:
     __test__ = False  # make pytest not think this should be tested
 
     name: str
-    cases: list[Union[TestCase, dict]]
+    cases: list[TestCase]
 
     i: int = field(default_factory=int, init=False)
-
-    def _parse_test_case(self, tcase: dict) -> TestCase:
-        """Creates a new ``TestCase`` object using a dictionary, this is done by first
-        converting ``tcase`` into a default dict that returns `None` when a key is
-        missing and that way saves the need to verify wether optional arguments are
-        present. Then it deletes these arguments to not pass them twice and tcase is
-        then passed as the ``kwargs`` that ``TestCase`` requires
-        """
-        tcase = defaultdict(lambda: None, tcase)
-        tc_kwargs = {
-            "result": tcase["result"],
-            "raises": tcase["raises"],
-            "exc_msg": tcase["exc_msg"],
-        }
-        del tcase["result"]
-        del tcase["raises"]
-        del tcase["exc_msg"]
-        return TestCase(**tc_kwargs, **tcase)
 
     def __iter__(self):
         self.i = 0
@@ -102,35 +132,8 @@ class TestCases:
         if self.i == len(self.cases):
             raise StopIteration
         try:
-            name = f"{self.name}_{self.i}"
             cur_case = self.cases[self.i]
-            if isinstance(cur_case, TestCase):
-                return TestCasesIter(name, cur_case)
-            return TestCasesIter(name, self._parse_test_case(cur_case))
+            name = f"{self.name}_{self.i}" if not cur_case.name else f"{cur_case.name}"
+            return TestCasesIter(name, cur_case)
         finally:
             self.i += 1
-
-
-class Tester:
-    """Helper class that runs a function and tests if its behavior based on logic that
-    is defined and provided by ``TestCases``
-    """
-
-    __test__ = False  # make pytest not think this should be tested
-
-    def _run_with_except(self, f: Callable, tcr: TestCase):
-        assert tcr.exc is not None
-        with pytest.raises(tcr.exc, match=tcr.exc_msg):
-            f(**tcr.kw)
-
-    def run_test_case(self, f: Callable, tcase: TestCase):
-        """Runs a function ``f`` for each ``TestCase`` in ``TestCases`` and verifies its
-        behavior. Checkes if the expected result is returned, if the right Exception is
-        raised and also, if present, if the raised Exception contains a certian string
-        """
-        if tcase.exc is not None:
-            self._run_with_except(f, tcase)
-        else:
-            res = f(**tcase.kw)
-            if res != tcase.result:
-                pytest.fail(f"Expected result: {tcase.result} but got: {res}")

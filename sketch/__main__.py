@@ -1,10 +1,12 @@
 from datetime import datetime
-from models.price_action import YClient
+from models.client import YClient
+from clock import Clock
+from consts import TIME_FMT_DAY
 
 CASH = 1000.0
 
 
-def main():
+def smas_cross():
     c = YClient()
     start = datetime.strptime("2025-01-01", "%Y-%m-%d")
     end = datetime.now()
@@ -55,6 +57,19 @@ def main():
     )
 
     return pa
+
+
+def iter_clock():
+    start = datetime.strptime("2025-04-07", TIME_FMT_DAY)
+    end = datetime.strptime("2025-04-15", TIME_FMT_DAY)
+    c = Clock(start, end, interval="1w")
+    fmt = "%Y-%m-%dT%H:%M:%S"
+    for t in c:
+        print(f"Open: {t.open.strftime(fmt)}\tClose: {t.close.strftime(fmt)}")
+
+
+def main():
+    iter_clock()
 
 
 if __name__ == "__main__":

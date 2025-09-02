@@ -1,9 +1,11 @@
 import pandas as pd
+from collections.abc import Generator
 import pandas_market_calendars as mcal
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from typing import Union, ClassVar
 
+from consts import TIME_FMT_DAY
 from models import Bar
 from utils import parse_interval, td_to_str, discard_datetime_by_interval
 from .exceptions import IntervalNotSupported
@@ -12,9 +14,7 @@ INTERVALS_ALLOWED = ["1m", "5m", "10m", "30m", "1h", "1d", "7d", "1w"]
 INTERVALS_ALLOWED_TD = [parse_interval(i) for i in INTERVALS_ALLOWED]
 INTERVALS_REPR = ", ".join(INTERVALS_ALLOWED)
 
-MCAL_TIME_FMT = "%Y-%m-%d"
 SCHEDULE_TIME_FMT = "%Y-%m-%d %H:%M:%S"
-MINS_30 = timedelta(minutes=30)
 
 
 # pylint: disable=R0902
@@ -62,22 +62,19 @@ class Clock:
         self.is_intraday = self._ival_td < timedelta(days=1)
 
         # Set up a schedule of the trading sessions
-        self._market_start = "pre" if self.extended else "market_open"
-        self._market_end = "post" if self.extended else "market_close"
-        self.sched = Clock.nyse.schedule(
+        market_start = "pre" if self.extended else "market_open"
+        market_end = "post" if self.extended else "market_close"
+        sched = Clock.nyse.schedule(
             tz=self.tz,
-            start_date=self.start.strftime(MCAL_TIME_FMT),
-            end_date=self.end.strftime(MCAL_TIME_FMT),
-            start=self._market_start,
-            end=self._market_end,
+            start_date=self.start.strftime(TIME_FMT_DAY),
+            end_date=self.end.strftime(TIME_FMT_DAY),
+            start=market_start,
+            end=market_end,
         )
-        if self._ival_td < timedelta(days=1):
-            self.range = mcal.date_range(self.sched, frequency=self._ival_str)
-        else:
-            self.range = mcal.date_range(self.sched, frequency="1d")
-        self._range_i = 0
-        self._range_len = len(self.range)
-        self._sched_calc = True
+        self.days = sched.index
+        self.mkt_opens = sched.market_open
+        self.mkt_close = sched.market_close
+        self._iterator: Generator[Bar, None, None]
 
     def _parse_interval(self):
         if isinstance(self.interval, str):
@@ -92,49 +89,64 @@ class Clock:
                 f"supported intervals are: {INTERVALS_REPR}"
             )
 
-    def _cmp_bars(self, cell: str, ts: Union[pd.Timestamp, datetime]) -> bool:
-        """Compares if a timestamp matches against a specific cell for the same day"""
-        day = ts.date().strftime(MCAL_TIME_FMT)  # format it to str repr
-        v = self.sched.at[day, cell]
+    def is_first_day(self, d: pd.Timestamp):
+        """Check if the date is the last day in range"""
+        return d.date() == self.mkt_opens.iloc[0].date()
 
-        return ts == v
+    def is_last_day(self, d: pd.Timestamp):
+        """Check if the date is the last day in range"""
+        return d.date() == self.mkt_close.iloc[-1].date()
 
-    def _is_first_bar_of_day(self, ts: Union[pd.Timestamp, datetime]) -> bool:
-        return self._cmp_bars(self._market_start, ts)
+    def are_same_week(self, t1: pd.Timestamp, t2: pd.Timestamp):
+        """Checks if two date objects fall within the same ISO week."""
+        return t1.isocalendar()[:2] == t2.isocalendar()[:2]
 
-    def _is_last_bar_of_day(self, ts: Union[pd.Timestamp, datetime]) -> bool:
-        return self._cmp_bars(self._market_end, ts)
+    # todo: move all the bar functionality to models.price_bar
+    def generate_bars(self) -> Generator[Bar, None, None]:
+        """Generates the Bars Generator that copmutes the current bar on runtime"""
+        i = -1
+        week_start = self.mkt_opens.iloc[0]
+        for day_open, day_close in zip(self.mkt_opens, self.mkt_close):
+            i += 1
+
+            # Yield bars within the day
+            if self.is_intraday:
+                bar_open = day_open
+                while bar_open < day_close:
+                    # Use day_close if the calculated bar_close is higher
+                    bar_close = min(bar_open + self._ival_td, day_close)
+                    yield Bar(bar_open, bar_close)
+                    bar_open += self._ival_td
+
+            # For daily bars, yield a single bar for the whole day
+            elif self._ival_td == timedelta(days=1):
+                yield Bar(day_open, day_close)
+
+            # For weekly bars, calculate the week start & finish
+            elif self._ival_td == timedelta(days=7):
+                if self.are_same_week(week_start, day_open):
+                    # if range ends, use this as the close of the Bar
+                    if self.is_last_day(day_close):
+                        yield Bar(week_start, day_close)
+                    continue
+                # Week close is the last day before entering a different week
+                previous_day = self.mkt_close.iloc[i - 1]
+                yield Bar(week_start, previous_day)
+                week_start = day_open
 
     def __iter__(self):
+        """Iterate over the entire time range using the specified interval"""
+        self._iterator = self.generate_bars()
         return self
 
-    def __next__(self) -> Bar:
-        """Iterates over the date range that has been generated upon instance
-        initialization
+    # pylint: disable=W0706
+    def __next__(self):
+        """dummy function that iterates over the iterator that was created by the
+        ``__iter__()`` function.
 
-        Note:
-            This returns the CLOSE time of the bar!!
-
-        todo: return Tuple of open & close of each bar. probably will be needed
+        Important to make this class to be classified as an Iterator object
         """
-        if self._range_i == self._range_len:
-            raise StopIteration
-
         try:
-            # the timestamps are always the CLOSE timestamps, we need to calculate the
-            # OPEN timestamp independently
-            close_ts = self.range[self._range_i]
-            bar_close = close_ts.to_pydatetime()
-            if self._is_first_bar_of_day(bar_close - self._ival_td):
-                # If it's the first bar of the day, we can't use the previous timestamp
-                # as the bar's OPEN time
-                bar_open = bar_close - self._ival_td
-            else:
-                # If it isn't the first bar, use the last bar's CLOSE Timestamp as this
-                # one's OPEN Timestamp
-                open_ts = self.range[self._range_i - 1]
-                bar_open = open_ts.to_pydatetime()
-
-            return Bar(bar_open, bar_close)
-        finally:
-            self._range_i += 1
+            return next(self._iterator)
+        except StopIteration:
+            raise

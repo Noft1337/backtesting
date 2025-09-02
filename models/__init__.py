@@ -1,2 +1,2 @@
 from .price_action import PriceAction
-from .bar import Bar
+from .price_bar import Bar

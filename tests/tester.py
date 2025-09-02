@@ -88,7 +88,8 @@ class TestCase:
             results.append(i)
         if self.result != results:
             pytest.fail(
-                f"Iteration expected results: {self.result}, actual results: {results}"
+                f"Iteration expected results:\n\t{self.result}\n"
+                f"Actual results\n\t{results}"
             )
 
     def test_class(self, f: Callable):

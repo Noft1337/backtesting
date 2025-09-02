@@ -49,21 +49,18 @@ _time_range_1yr = {
 }
 
 # Defines the time range for one month (April 1 to May 1, 2025)
-# Corrected format: %Y-%m (Year-Month)
 _time_range_1mo = {
     "start": datetime.strptime("2025-04", "%Y-%m"),
     "end": datetime.strptime("2025-05", "%Y-%m"),
 }
 
 # Defines the time range for one week in April
-# Corrected format: %Y-%m-%d (Year-Month-Day)
 _time_range_1wk = {
     "start": datetime.strptime("2025-04-07", TIME_FMT_DAY),
-    "end": datetime.strptime("2025-04-14", TIME_FMT_DAY),
+    "end": datetime.strptime("2025-04-11", TIME_FMT_DAY),
 }
 
 # Defines the time range for a single day in April
-# Corrected format: %Y-%m-%d (Year-Month-Day)
 _time_range_1d = {
     "start": datetime.strptime("2025-04-07", TIME_FMT_DAY),
     "end": datetime.strptime("2025-04-07", TIME_FMT_DAY),
@@ -109,7 +106,7 @@ tcs_clock_iters = TestCases(
                 Bar(_dt("2025-04-07T09:30"), _dt("2025-04-11T16:00")),
                 Bar(_dt("2025-04-14T09:30"), _dt("2025-04-17T16:00")),  # Good Friday
                 Bar(_dt("2025-04-21T09:30"), _dt("2025-04-25T16:00")),
-                Bar(_dt("2025-04-28T09:30"), _dt("2025-04-30T16:00")),  # Ends mid week
+                Bar(_dt("2025-04-28T09:30"), _dt("2025-05-01T16:00")),  # Ends mid week
             ],
             raises=None,
             exc_msg=None,
@@ -121,7 +118,7 @@ tcs_clock_iters = TestCases(
             interval="1d",
             result=[
                 Bar(_dt(f"2025-04-{i:02}T09:30"), _dt(f"2025-04-{i:02}T16:00"))
-                for i in range(7, 11)
+                for i in range(7, 12)
             ],
             raises=None,
             exc_msg=None,

@@ -3,7 +3,7 @@ from collections.abc import Generator
 import pandas_market_calendars as mcal
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
-from typing import Union, ClassVar
+from typing import Union, ClassVar, cast
 
 from consts import TIME_FMT_DAY
 from models import Bar
@@ -64,16 +64,16 @@ class Clock:
         # Set up a schedule of the trading sessions
         market_start = "pre" if self.extended else "market_open"
         market_end = "post" if self.extended else "market_close"
-        sched = Clock.nyse.schedule(
+        self.sched = Clock.nyse.schedule(
             tz=self.tz,
             start_date=self.start.strftime(TIME_FMT_DAY),
             end_date=self.end.strftime(TIME_FMT_DAY),
             start=market_start,
             end=market_end,
         )
-        self.days = sched.index
-        self.mkt_opens = sched.market_open
-        self.mkt_close = sched.market_close
+        self.days = self.sched.index
+        self.mkt_opens = self.sched.market_open
+        self.mkt_close = self.sched.market_close
         self._iterator: Generator[Bar, None, None]
 
     def _parse_interval(self):
@@ -89,50 +89,42 @@ class Clock:
                 f"supported intervals are: {INTERVALS_REPR}"
             )
 
-    def is_first_day(self, d: pd.Timestamp):
-        """Check if the date is the last day in range"""
-        return d.date() == self.mkt_opens.iloc[0].date()
-
-    def is_last_day(self, d: pd.Timestamp):
-        """Check if the date is the last day in range"""
-        return d.date() == self.mkt_close.iloc[-1].date()
-
-    def are_same_week(self, t1: pd.Timestamp, t2: pd.Timestamp):
-        """Checks if two date objects fall within the same ISO week."""
-        return t1.isocalendar()[:2] == t2.isocalendar()[:2]
-
-    # todo: move all the bar functionality to models.price_bar
-    def generate_bars(self) -> Generator[Bar, None, None]:
-        """Generates the Bars Generator that copmutes the current bar on runtime"""
-        i = -1
-        week_start = self.mkt_opens.iloc[0]
+    def _generate_intraday_bars(self) -> Generator[Bar, None, None]:
+        """Generates bars for intraday intervals."""
         for day_open, day_close in zip(self.mkt_opens, self.mkt_close):
-            i += 1
+            bar_open = day_open
+            while bar_open < day_close:
+                bar_close = min(bar_open + self._ival_td, day_close)
+                yield Bar(bar_open, bar_close)
+                bar_open += self._ival_td
 
-            # Yield bars within the day
-            if self.is_intraday:
-                bar_open = day_open
-                while bar_open < day_close:
-                    # Use day_close if the calculated bar_close is higher
-                    bar_close = min(bar_open + self._ival_td, day_close)
-                    yield Bar(bar_open, bar_close)
-                    bar_open += self._ival_td
+    def _generate_daily_bars(self) -> Generator[Bar, None, None]:
+        """Generates bars for daily intervals."""
+        for day_open, day_close in zip(self.mkt_opens, self.mkt_close):
+            yield Bar(day_open, day_close)
 
-            # For daily bars, yield a single bar for the whole day
-            elif self._ival_td == timedelta(days=1):
-                yield Bar(day_open, day_close)
+    def _generate_weekly_bars(self) -> Generator[Bar, None, None]:
+        """Generates bars for weekly intervals using pandas."""
+        idx = cast(pd.DatetimeIndex, self.sched.index)
+        weekly_groups = self.sched.groupby(
+            [idx.isocalendar().year, idx.isocalendar().week]
+        )
 
-            # For weekly bars, calculate the week start & finish
-            elif self._ival_td == timedelta(days=7):
-                if self.are_same_week(week_start, day_open):
-                    # if range ends, use this as the close of the Bar
-                    if self.is_last_day(day_close):
-                        yield Bar(week_start, day_close)
-                    continue
-                # Week close is the last day before entering a different week
-                previous_day = self.mkt_close.iloc[i - 1]
-                yield Bar(week_start, previous_day)
-                week_start = day_open
+        for _, week_df in weekly_groups:
+            week_open = week_df["market_open"].iloc[0]
+            week_close = week_df["market_close"].iloc[-1]
+            yield Bar(week_open, week_close)
+
+    def generate_bars(self) -> Generator[Bar, None, None]:
+        """
+        Dispatcher method: calls the correct generator based on the interval.
+        """
+        if self.is_intraday:
+            yield from self._generate_intraday_bars()
+        elif self._ival_td == timedelta(days=1):
+            yield from self._generate_daily_bars()
+        elif self._ival_td >= timedelta(days=7):  # Or weeks=1
+            yield from self._generate_weekly_bars()
 
     def __iter__(self):
         """Iterate over the entire time range using the specified interval"""

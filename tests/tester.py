@@ -81,10 +81,10 @@ class TestCase:
         with pytest.raises(self.raises, match=self.exc_msg):
             f(**self.meta)
 
-    def test_iter(self, f: Iterator):
+    def test_iter(self, it: Iterator):
         """Test an Iterator Case"""
         results = []
-        for i in f:
+        for i in it:
             results.append(i)
         if self.result != results:
             pytest.fail(

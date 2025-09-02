@@ -66,7 +66,7 @@ _time_range_1wk = {
 # Corrected format: %Y-%m-%d (Year-Month-Day)
 _time_range_1d = {
     "start": datetime.strptime("2025-04-07", TIME_FMT_DAY),
-    "end": datetime.strptime("2025-04-08", TIME_FMT_DAY),
+    "end": datetime.strptime("2025-04-07", TIME_FMT_DAY),
 }
 
 

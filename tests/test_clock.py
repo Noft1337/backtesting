@@ -101,6 +101,7 @@ tcs_clock_iters = TestCases(
     "test_clock_iterator",
     [
         TestCase(
+            "test_1w_bars",
             case=Case.ITERATOR,
             interval="1w",
             result=[
@@ -115,6 +116,7 @@ tcs_clock_iters = TestCases(
             **_time_range_1mo,
         ),
         TestCase(
+            "test_1d_bars",
             case=Case.ITERATOR,
             interval="1d",
             result=[
@@ -127,6 +129,7 @@ tcs_clock_iters = TestCases(
         ),
         # Intraday cases
         TestCase(
+            "test_1m_bars",
             interval="1m",
             case=Case.ITERATOR,
             result=_get_intraday_min_bars(1),
@@ -135,6 +138,7 @@ tcs_clock_iters = TestCases(
             **_time_range_1d,
         ),
         TestCase(
+            "test_5m_bars",
             interval="5m",
             case=Case.ITERATOR,
             result=_get_intraday_min_bars(5),
@@ -143,6 +147,7 @@ tcs_clock_iters = TestCases(
             **_time_range_1d,
         ),
         TestCase(
+            "test_10m_bars",
             interval="10m",
             case=Case.ITERATOR,
             result=_get_intraday_min_bars(10),
@@ -151,6 +156,7 @@ tcs_clock_iters = TestCases(
             **_time_range_1d,
         ),
         TestCase(
+            "test_1h_bars",
             case=Case.ITERATOR,
             interval="1h",
             result=[

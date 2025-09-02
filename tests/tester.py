@@ -39,12 +39,14 @@ class TestCase:
 
     def __init__(
         self,
+        name: str = "",
         case: Case = Case.SIMPLE,
         result: Optional[Any] = None,
         raises: Optional[type[Exception]] = None,
         exc_msg: Optional[str] = None,
         **kwargs,
     ):
+        self.name = name
         self.case = case
         self.result = result
         self.raises = raises
@@ -129,8 +131,8 @@ class TestCases:
         if self.i == len(self.cases):
             raise StopIteration
         try:
-            name = f"{self.name}_{self.i}"
             cur_case = self.cases[self.i]
+            name = f"{self.name}_{self.i}" if not cur_case.name else f"{cur_case.name}"
             return TestCasesIter(name, cur_case)
         finally:
             self.i += 1

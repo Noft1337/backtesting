@@ -2,7 +2,7 @@ import pandas as pd
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Optional, ClassVar, NamedTuple
-from .exceptions import IdenticalSMASCantCrossError
+from ..exceptions import IdenticalSMASCantCrossError
 
 
 class SMAResult(NamedTuple):

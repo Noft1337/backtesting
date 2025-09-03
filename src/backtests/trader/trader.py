@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from dataclasses import dataclass
-from methods import Method
+from ..strategies import Method
 
 
 @dataclass

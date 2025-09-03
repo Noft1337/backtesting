@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import Optional
 from .price_action import PriceAction
-from .exceptions import EmptyPriceActionError, WTF
+from ..exceptions import EmptyPriceActionError, WTF
 
 
 class YClient(BaseModel):

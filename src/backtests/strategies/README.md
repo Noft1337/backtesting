@@ -1,4 +1,4 @@
-# Method
+# Strategies
 This is the parent class that all the methods inherit from this will specify how long should the price action of a ticker be inspected before taking action and/or, when to take action.  
 When the method is "confirmed", a percentage of certianty will be returned according to how many triggers were activated
 

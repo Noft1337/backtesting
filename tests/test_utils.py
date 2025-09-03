@@ -3,7 +3,7 @@ import pytest
 from datetime import timedelta, datetime
 
 from tests import *
-from utils.funcs import parse_interval, td_to_str, discard_datetime_by_interval
+from src.backtests.utils import parse_interval, td_to_str, discard_datetime_by_interval
 
 
 _exc_msg_1 = "Allowed formats must have one of these units included: w,d,h,m,s"
@@ -91,7 +91,7 @@ tcs_discard_datetime_by_interval = TestCases(
 )
 
 
-# TODO: Figure why this skips the test
+# XXX: Figure why this skips the test
 # @pytest.mark.dependency(depends=["test_td_to_str"])
 @pytest.mark.parametrize(
     "tc", tcs_discard_datetime_by_interval, ids=tids(tcs_discard_datetime_by_interval)

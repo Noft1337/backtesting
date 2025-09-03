@@ -1,7 +1,6 @@
 from datetime import datetime
-from models.client import YClient
-from clock import Clock
-from consts import TIME_FMT_DAY
+from src.backtests.core import YClient, Clock
+from src.backtests.config import TIME_FMT_DAY
 
 CASH = 1000.0
 

@@ -5,10 +5,9 @@ from zoneinfo import ZoneInfo
 
 from tests import *
 from tests.utils import get_datetime
-from consts import TIME_FMT_DAY
-from clock import Clock
-from models import Bar
-from clock.exceptions import IntervalNotSupported
+from src.backtests.config import TIME_FMT_DAY
+from src.backtests.core import Bar, Clock
+from src.backtests.exceptions import IntervalNotSupported
 
 
 _start = datetime(year=2001, month=11, day=1)

@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from typing import Union, ClassVar, cast
 
-from consts import TIME_FMT_DAY
-from models import Bar
-from utils import parse_interval, td_to_str, discard_datetime_by_interval
-from .exceptions import IntervalNotSupported
+from ..config import TIME_FMT_DAY
+from . import Bar
+from ..utils import parse_interval, td_to_str, discard_datetime_by_interval
+from ..exceptions import IntervalNotSupported
 
 INTERVALS_ALLOWED = ["1m", "5m", "10m", "30m", "1h", "1d", "7d", "1w"]
 INTERVALS_ALLOWED_TD = [parse_interval(i) for i in INTERVALS_ALLOWED]
@@ -118,6 +118,7 @@ class Clock:
     def generate_bars(self) -> Generator[Bar, None, None]:
         """
         Dispatcher method: calls the correct generator based on the interval.
+        XXX: In the future, maybe move this to models.price_bar / utils ?
         """
         if self.is_intraday:
             yield from self._generate_intraday_bars()

@@ -1,4 +1,4 @@
-from consts import TIME_FMT_FULL
+from ..config import TIME_FMT_FULL
 from datetime import datetime
 from typing import NamedTuple
 
